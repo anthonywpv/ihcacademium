@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://anthonywpv.github.io/ihcacademium",
+  "homepage": "https://s1rgreen.github.io/ihcacademium",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
