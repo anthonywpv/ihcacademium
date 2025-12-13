@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import '/src/App.css'; // Importa la ruta absoluta
 
-// --- Importación de Librerías ---
+// -- Importación de Librerías --
 import { 
   User, Briefcase, Home, FileText, DollarSign, BarChart2, Users, 
   Bell, Settings, MessageSquare, X, Cpu, Lock, Send, ChevronLeft, 
