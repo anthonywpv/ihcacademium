@@ -1,865 +1,522 @@
-import { useState, useEffect, useRef } from 'react';
-import '/src/App.css'; // Importa la ruta absoluta
-
-// -- Importación de Librerías --
+import React, { useState, useEffect, useRef } from 'react';
+import './App.css';
 import { 
-  User, Briefcase, Home, FileText, DollarSign, BarChart2, Users, 
-  Bell, Settings, MessageSquare, X, Cpu, Lock, Send, ChevronLeft, 
-  ChevronRight, UserCheck, LogOut, Mail, MessageCircle, AlertTriangle,
-  TrendingUp, Zap, BellOff, Sliders
-} from 'react-feather'; // Añadidos nuevos íconos
-import { Pie, Bar } from 'react-chartjs-2';
-import { 
-  Chart as ChartJS, 
-  ArcElement, 
-  Tooltip, 
-  Legend, 
-  CategoryScale, 
-  LinearScale, 
-  BarElement,
-  Title
-} from 'chart.js';
+  Home, Settings, Users, ShoppingCart, DollarSign, FileText, 
+  BarChart2, Search, Bell, MessageSquare, X, Send, Clock, 
+  Inbox, Minimize2, Maximize2, AlertTriangle, Activity, Layout,
+  ArrowLeft, Check, Zap, Lock, Mail, MessageCircle, UserCheck, TrendingUp, BellOff
+} from 'react-feather';
 
-// Registrar los componentes de Chart.js que vamos a usar
-ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
-
-// --- Flujo de Conversación del Chatbot (Definición) ---
-const chatFlow = {
-  // --- INICIO Y BUCLES ---
-  'start_no_intro': {
-    message: null, 
-    options: [],
-    redirectTo: (role) => role === 'cliente' ? 'menu_cliente' : 'menu_gerente'
-  },
-  'volver_al_menu': {
-    message: '¿Requieres consultar algo más?',
+// --- CONFIGURACIÓN DEL FLUJO DEL CHAT --- //
+const initialChatFlow = {
+  start: {
+    msg: "Hola, Gerente. He detectado actualizaciones críticas en los últimos 30 minutos. ¿Qué deseas revisar?",
     options: [
-      { text: 'Sí, volver al menú', nextStep: 'start_no_intro' },
-      { text: 'No, gracias', nextStep: 'fin_conversacion' }
+      { text: "📊 Riesgo Financiero", next: "risk_finance" },
+      { text: "👥 Riesgo Talento Humano", next: "risk_hr" },
+      { text: "🎓 Riesgo Académico", next: "risk_academic" },
+      { text: "📈 Proyección de Ventas", next: "sales_forecast" }
     ]
   },
-  'fin_conversacion': {
-    message: '¡De nada! Ha sido un placer ayudarte. Estoy aquí si me necesitas.'
-  },
-  'fallback_prompt': {
-    message: 'No entendí tu solicitud. ¿Qué te gustaría hacer?',
+  risk_finance: {
+    msg: "<strong>Análisis Financiero:</strong><br/>Cartera vencida ha aumentado un 5% este mes. <br/><br/><span class='risk-badge high'></span> Riesgo Alto en liquidez inmediata.",
     options: [
-      { text: 'Ir al menú principal', nextStep: 'start_no_intro' },
-      { text: 'Hablar con un operador (Cliente)', nextStep: 'hablar_agente' },
-      { text: 'Reportar un problema (Admin)', nextStep: 'reportar_problema' }
+      { text: "Ver detalle de deudores", next: "finance_details" },
+      { text: "Sugerir plan de cobro", next: "finance_plan" },
+      { text: "Volver al inicio", next: "start" }
     ]
   },
-
-  // --- FLUJO CLIENTE ---
-  'menu_cliente': {
-    message: '¡Hola, {Nombre_Cliente}! Soy tu asistente. ¿Cómo puedo ayudarte hoy?',
+  finance_details: {
+    msg: "He generado un reporte en Excel con los 50 estudiantes con mayor deuda. ¿Deseas descargarlo o enviarlo a contabilidad?",
     options: [
-      { text: '¿Dónde pago mi factura?', nextStep: 'pago_factura' },
-      { text: 'Reportar un pago', nextStep: 'reportar_pago' },
-      { text: 'Ver mi historial de pagos', nextStep: 'historial_pagos' },
-      { text: 'Hablar con un agente', nextStep: 'hablar_agente' }
+      { text: "Descargar Excel", next: "download_excel" },
+      { text: "Enviar a Contabilidad", next: "email_sent" }
     ]
   },
-  'pago_factura': {
-    message: 'Puedes pagar tu factura en línea con tarjeta de crédito, o en ventanilla en cualquier agencia del Banco Pichincha.',
-    nextStep: 'volver_al_menu'
+  risk_hr: {
+    msg: "<strong>Talento Humano:</strong><br/>Se detecta un índice de rotación del 12% en el área docente.<br/><br/><span class='risk-badge medium'></span> Riesgo Medio operativo.",
+    options: [{ text: "Analizar causas", next: "hr_causes" }, { text: "Volver", next: "start" }]
   },
-  'reportar_pago': {
-    message: '¡Genial! Por favor, ¿podrías indicarme el monto exacto que pagaste?',
-    options: [
-      { text: '$50.00 (Valor Pendiente)', nextStep: 'pago_reportado' },
-      { text: 'Pagué otro valor', nextStep: 'pago_otro_valor' }
-    ]
+  hr_causes: {
+    msg: "Las encuestas de salida indican 'Salario no competitivo' como la causa principal (60%).",
+    options: [{ text: "Volver", next: "start" }]
   },
-  'pago_reportado': {
-    message: '¡Perfecto! Hemos registrado tu pago de $50.00. Se verá reflejado en tu cuenta en las próximas 24 horas.',
-    nextStep: 'volver_al_menu'
+  download_excel: {
+    msg: "✅ Archivo <em>Reporte_Mora_2025.xlsx</em> generado y descargado correctamente.",
+    options: [{ text: "Gracias", next: "start" }]
   },
-  'pago_otro_valor': {
-    message: 'No hay problema. Por favor, contacta a un agente para verificar el pago manualmente.',
-    nextStep: 'volver_al_menu'
+  email_sent: {
+    msg: "✅ Correo enviado al Jefe Financiero con el reporte adjunto.",
+    options: [{ text: "Gracias", next: "start" }]
   },
-  'historial_pagos': {
-    message: 'Aquí tienes un carrusel con tus últimos 3 pagos:',
-    carousel: [
-      { title: 'Factura Octubre', content: 'Pagada el 01/Nov. Monto: $250.00' },
-      { title: 'Factura Septiembre', content: 'Pagada el 02/Oct. Monto: $250.00' },
-      { title: 'Factura Agosto', content: 'Pagada el 01/Sep. Monto: $250.00' }
-    ],
-    nextStep: 'volver_al_menu'
-  },
-  'hablar_agente': {
-    message: 'Entendido. Por favor, describe brevemente tu problema a continuación y un agente se conectará a este chat.',
-    awaitInput: 'agente_contactado'
-  },
-  'agente_contactado': {
-    message: '¡Gracias! Tu mensaje ha sido registrado. Un operador se pondrá en contacto contigo en breve.',
-    nextStep: 'volver_al_menu'
-  },
-
-  // --- FLUJO GERENTE (REDISEÑADO) ---
-  'menu_gerente': {
-    message: 'Hola {Nombre_Administrativo}, bienvenido. ¿En qué te ayudo a profundizar?',
-    options: [
-      { text: 'Análisis Predictivo: Predecir recaudación', nextStep: 'predecir_recaudacion' },
-      { text: 'Análisis Comparativo: vs. Año Anterior', nextStep: 'comparar_recaudacion' },
-      { text: 'Análisis de Riesgo: Detectar deserción', nextStep: 'riesgo_desercion' },
-      { text: 'Reporte: Generar cartera vencida', nextStep: 'reporte_cartera' },
-      { text: 'Sensible: Ver listado de salarios', nextStep: 'info_sensible' },
-      { text: 'Soporte: Reportar un problema', nextStep: 'reportar_problema' }
-    ]
-  },
-  'predecir_recaudacion': { // NUEVO
-    message: 'Calculando... Basado en la tendencia de los últimos 6 meses y la matrícula activa, se proyecta una recaudación de **$155,000** para el próximo mes (un 3% de incremento). ¿Deseas ver el análisis detallado?',
-    options: [
-      { text: 'Sí, ver detalle', nextStep: 'detalle_prediccion' },
-      { text: 'No, gracias', nextStep: 'start_no_intro' }
-    ]
-  },
-  'detalle_prediccion': { // NUEVO
-    message: 'El análisis predictivo considera: <br> - Tendencia histórica: +$3,500 <br> - Nuevos estudiantes: +$2,000 <br> - Tasa de morosidad proyectada: -$1,000',
-    nextStep: 'volver_al_menu'
-  },
-  'comparar_recaudacion': { // NUEVO
-    message: 'Aquí tienes la comparativa de recaudación (Ene-Oct):<br> - **Año Actual:** $1,450,000<br> - **Año Anterior:** $1,320,000<br> <strong class="positive">Incremento: +9.8%</strong><br>¿Quieres analizar el mes con mayor diferencia?',
-    options: [
-      { text: 'Sí, analizar mes', nextStep: 'detalle_comparativa' },
-      { text: 'No, gracias', nextStep: 'start_no_intro' }
-    ]
-  },
-  'detalle_comparativa': { // NUEVO
-    message: 'El mes con mayor diferencia fue **Agosto** (+22%), coincidiendo con la campaña de "pronto pago" de matrículas.',
-    nextStep: 'volver_al_menu'
-  },
-  'riesgo_desercion': { // NUEVO
-    message: 'He identificado a **15 estudiantes** con alto riesgo de deserción (basado en 2+ pensiones vencidas y nula comunicación). ¿Quieres ver el listado para que el dpto. de bienestar contacte?',
-    carousel: [
-      { title: 'J. Perez (ID 1123)', content: '3 pensiones vencidas. Último pago: Agosto.' },
-      { title: 'M. Gonzalez (ID 1452)', content: '2 pensiones vencidas. Clic para ver historial.' },
-      { title: 'A. Andrade (ID 1098)', content: '2 pensiones vencidas. Promedio bajo.' }
-    ],
-    nextStep: 'volver_al_menu'
-  },
-  'reporte_cartera': {
-    message: 'Estoy generando el reporte de cartera vencida... Listo. ¿Deseas descargarlo en Excel o PDF?',
-    options: [
-      { text: 'Descargar en Excel', nextStep: 'descarga_exitosa' },
-      { text: 'Descargar en PDF', nextStep: 'descarga_exitosa' }
-    ]
-  },
-  'descarga_exitosa': {
-    message: 'El archivo se ha descargado en tu dispositivo.',
-    nextStep: 'volver_al_menu'
-  },
-  'info_sensible': {
-    message: 'Estás solicitando <strong>información sensible</strong>. Por tu seguridad, esta información está encriptada y no puede mostrarse en un lugar público. ¿Confirmas que deseas verla?',
-    options: [
-      { text: 'Sí, mostrar información', nextStep: 'info_desencriptada' },
-      { text: 'No, cancelar', nextStep: 'start_no_intro' }
-    ]
-  },
-  'info_desencriptada': {
-    message: 'Desencriptando... El total de la nómina del mes pasado fue de $45,300.00.',
-    nextStep: 'volver_al_menu'
-  },
-  'reportar_problema': { 
-    message: 'Por favor, describe el problema o error que encontraste. Tu reporte será enviado al equipo técnico.',
-    awaitInput: 'problema_reportado'
-  },
-  'problema_reportado': { 
-    message: '¡Gracias! Tu reporte ha sido enviado con éxito al equipo de desarrollo.',
-    nextStep: 'volver_al_menu'
-  },
-
-  // --- FLUJO COMÚN (Desde Gráficos) ---
-  'analisis_cliente_pie': {
-    message: 'El gráfico "Gastos por Categoría" muestra que la <strong>Pensión (70%)</strong> es el rubro principal. ¿Te gustaría ver el detalle de "Otros"?',
-    options: [
-      { text: 'Sí, ver detalle', nextStep: 'detalle_otros' },
-      { text: 'No, gracias', nextStep: 'start_no_intro' }
-    ]
-  },
-  'detalle_otros': {
-    message: 'El rubro "Otros" ($25.00) se compone de: <br> - Transporte de bus: $15.00 <br> - Venta de garage: $10.00',
-    nextStep: 'volver_al_menu'
-  },
-  'analisis_cliente_bar': {
-    message: 'Este gráfico muestra tus pagos de pensión de los últimos 6 meses. Se ve un pago duplicado en Septiembre. ¿Quieres reportar este pago?',
-    options: [
-      { text: 'Sí, reportar pago duplicado', nextStep: 'reportar_pago_duplicado' },
-      { text: 'No, está correcto', nextStep: 'start_no_intro' }
-    ]
-  },
-  'reportar_pago_duplicado': {
-    message: 'Entendido. Hemos generado un ticket (N° 4582) para la revisión del pago duplicado de Septiembre. Te notificaremos por correo.',
-    nextStep: 'volver_al_menu'
-  },
-  'analisis_admin_pie': {
-    message: 'Este gráfico muestra que los pagos en <strong class="negative">Efectivo/Ventanilla (45%)</strong> siguen siendo el método más común. ¿Quieres ver el análisis estadístico de este grupo?',
-    carousel: [
-      { title: 'Análisis: Efectivo/Ventanilla (45%)', content: 'Este método es costoso de procesar. El 70% de estos usuarios son clientes de más de 5 años. Se recomienda una campaña de migración a débito automático.' },
-      { title: 'Análisis: Tarjeta de Crédito (35%)', content: 'Ha crecido un 15% en los últimos 6 meses. La mayoría son pagos recurrentes automáticos de la pensión.' },
-      { title: 'Análisis: Transferencia (20%)', content: 'Usado principalmente para pagos de matrícula. El 30% de las transferencias fallan por errores de digitación del código de estudiante.' }
-    ],
-    nextStep: 'volver_al_menu'
-  },
-  'analisis_admin_bar': {
-    message: 'Este gráfico muestra un <strong class="positive">pico de recaudación los días Lunes</strong>, coincidiendo con el inicio de semana. El Jueves es el día más bajo. ¿Quieres cruzar esta data con los métodos de pago?',
-    options: [
-      { text: 'Sí, cruzar datos', nextStep: 'cruce_datos' },
-      { text: 'No, gracias', nextStep: 'start_no_intro' }
-    ]
-  },
-  'cruce_datos': {
-    message: 'Análisis: Los Lunes, el 80% de los pagos son en Efectivo/Ventanilla. Los Viernes, el 60% de los pagos son con Tarjeta de Crédito.',
-    nextStep: 'volver_al_menu'
-  }
+  // Fallbacks
+  risk_academic: { msg: "Datos académicos estables. No hay alertas.", options: [{ text: "Volver", next: "start" }] },
+  sales_forecast: { msg: "Proyección: +3% vs mes anterior.", options: [{ text: "Volver", next: "start" }] },
+  finance_plan: { msg: "Plan sugerido: Campaña de descuentos por pronto pago.", options: [{ text: "Volver", next: "start" }] }
 };
 
-// --- Datos de los Gráficos (Mock) ---
-const chartData = {
-  clientPie: {
-    data: {
-      labels: ['Pensión (70%)', 'Matrícula (20%)', 'Otros (10%)'],
-      datasets: [{
-        data: [70, 20, 10],
-        backgroundColor: ['#0056b3', '#007bff', '#6c757d'],
-        borderWidth: 0,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom' } }
-    }
-  },
-  clientBar: { 
-    data: {
-      labels: ['May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct'],
-      datasets: [{
-        label: 'Monto Pagado ($)',
-        data: [250, 250, 250, 250, 500, 250], 
-        backgroundColor: (context) => {
-          const value = context.dataset.data[context.dataIndex];
-          return value > 250 ? '#dc3545' : '#007bff'; 
-        },
-        borderRadius: 4,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true } }
-    }
-  },
-  adminPie: {
-    data: {
-      labels: ['Efectivo/Ventanilla (45%)', 'Tarjeta de Crédito (35%)', 'Transferencia (20%)'],
-      datasets: [{
-        data: [45, 35, 20],
-        backgroundColor: ['#0056b3', '#007bff', '#6c757d'],
-        borderWidth: 0,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom' } }
-    }
-  },
-  adminBar: {
-    data: {
-      labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
-      datasets: [{
-        label: 'Recaudación ($)',
-        data: [5200, 3100, 4200, 1500, 3800, 2100, 0],
-        backgroundColor: '#007bff',
-        borderRadius: 4,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { beginAtZero: true }
-      }
-    }
-  }
-};
+// --- COMPONENTE TOOLTIP LOCAL --- //
+const Tooltip = ({ title, children }) => (
+  <div title={title} style={{ display: 'inline-flex', cursor: 'help' }}>
+    {children}
+  </div>
+);
 
-
-// --- Componente Principal ---
 function App() {
-  const [userRole, setUserRole] = useState(null); 
-
-  if (!userRole) {
-    return <LoginScreen onLogin={setUserRole} />;
-  }
-
-  return <Dashboard userRole={userRole} onLogout={() => setUserRole(null)} />;
-}
-
-// --- Componente: Pantalla de Login ---
-function LoginScreen({ onLogin }) {
+  const [chatOpen, setChatOpen] = useState(false);
+  
   return (
-    <div className="login-screen">
-      <div className="login-container">
-        <h1>Academium</h1>
-        <h2>Portal de inicio de sesión</h2>
-        <div className="login-options">
-          <button onClick={() => onLogin('cliente')}>
-            <User size={20} />
-            Ingresar como Cliente
-          </button>
-          <button onClick={() => onLogin('admin')}>
-            <Briefcase size={20} />
-            Ingresar como Administrativo
-          </button>
-        </div>
-      </div>
+    <div className="app-container">
+      <Sidebar />
+      <Header setChatOpen={setChatOpen} />
+      <DashboardAcademium />
+      
+      {chatOpen && <ChatWidget onClose={() => setChatOpen(false)} />}
+      
+      {!chatOpen && (
+        <button 
+          onClick={() => setChatOpen(true)}
+          style={{
+            position: 'fixed', bottom: 30, right: 30, 
+            background: 'var(--color-primary-dark)', color: 'white',
+            border: 'none', borderRadius: '50%', width: 60, height: 60,
+            cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+            zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}
+        >
+          <MessageSquare size={28} />
+        </button>
+      )}
     </div>
   );
 }
 
-// --- Componente: Dashboard Principal (Contenedor) ---
-function Dashboard({ userRole, onLogout }) { 
-  const [currentModal, setCurrentModal] = useState(null); 
-  const [isChatOpen, setChatOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState([]);
-  const [analysisModal, setAnalysisModal] = useState({
-    visible: false, title: '', summary: '', nextStep: '', x: 0, y: 0
+// --- CHATBOT AVANZADO CON FIXES --- //
+const ChatWidget = ({ onClose }) => {
+  // 1. Estado de dimensiones persistente
+  const [size, setSize] = useState(() => {
+    const saved = localStorage.getItem('academium_chat_size');
+    return saved ? JSON.parse(saved) : { width: 380, height: 550 };
   });
 
-  // --- Lógica del Chat ---
-  const [inputText, setInputText] = useState('');
-  const [isAwaitingInput, setAwaitingInput] = useState(false);
-  const [inputCallbackStep, setInputCallbackStep] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [view, setView] = useState('chat'); // 'chat' | 'history' | 'settings' | 'devbox'
+  const [input, setInput] = useState('');
   
-  const addMessageToChat = (sender, content, options = [], carousel = []) => {
-    const newMessage = {
-      id: Date.now() + Math.random(),
-      sender, content, options, carousel
-    };
-    setChatMessages(prev => [...prev, newMessage]);
-  };
+  // 2. Configuración Completa (Restaurada)
+  const [settings, setSettings] = useState({
+    motorIA: 'estable', // estable, avanzado, experimental
+    proactividad: 'reactivo', // reactivo, proactivo
+    densidad: false, // false = simplificado
+    canal: 'email' // email, whatsapp
+  });
 
-  const showStep = (stepName) => {
-    let step = chatFlow[stepName];
-    if (!step) return;
+  // Refs para lógica
+  const chatRef = useRef(null);
+  const isResizing = useRef(false);
+  const resizeDir = useRef(null);
+  const startPos = useRef({ x: 0, y: 0, w: 0, h: 0 });
+  const messagesEndRef = useRef(null);
+  const hasInitialized = useRef(false); // FIX: Doble mensaje
 
-    if (step.redirectTo) {
-      const targetStep = step.redirectTo(userRole);
-      step = chatFlow[targetStep];
-    }
-    
-    const showBotMessage = () => {
-      if (step.message) { 
-        setChatMessages(prev => {
-          const newMessages = prev.slice(0, -1); 
-          const newMessage = {
-            id: Date.now(),
-            sender: 'bot',
-            content: step.message.replace('{Nombre_Cliente}', 'Cliente').replace('{Nombre_Administrativo}', 'Administrador'), // Placeholders
-            options: step.options || [],
-            carousel: step.carousel || []
-          };
-          return [...newMessages, newMessage];
-        });
-      }
-
-      if (step.awaitInput) {
-        setAwaitingInput(true);
-        setInputCallbackStep(step.awaitInput);
-      } else {
-        setAwaitingInput(false);
-        setInputCallbackStep(null);
-      }
-
-      if (step.nextStep) {
-        setTimeout(() => showStep(step.nextStep), 1000);
-      }
-    };
-    
-    if (step.message) {
-      addMessageToChat('bot', <TypingIndicator />);
-      setTimeout(showBotMessage, 750);
-    } else {
-      showBotMessage();
-    }
-  };
-  
-  const handleUserSelection = (nextStep, text) => {
-    addMessageToChat('user', text);
-    showStep(nextStep);
-  };
-
-  const handleTextInput = (text) => {
-    if (!text.trim()) return;
-
-    addMessageToChat('user', text);
-    setInputText(''); 
-
-    if (isAwaitingInput && inputCallbackStep) {
-      showStep(inputCallbackStep);
-    } else {
-      showStep('fallback_prompt');
-    }
-  };
-  
+  // --- EFFECT: Mensaje Inicial --- //
   useEffect(() => {
-    if (isChatOpen && chatMessages.length === 0) {
-      const startStep = userRole === 'cliente' ? 'menu_cliente' : 'menu_gerente';
-      showStep(startStep);
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      addBotMessage(initialChatFlow.start.msg, initialChatFlow.start.options);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isChatOpen]);
+  }, []);
 
-  // --- Lógica de Interacción Dashboard -> Chat ---
-  const handleChartClick = (e, chartId, title, summary) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setAnalysisModal({
-      visible: true, title, summary,
-      nextStep: `analisis_${chartId}`,
-      x: e.clientX, y: rect.top - 10
-    });
-  };
-
-  const handleAnalysisClick = () => {
-    setAnalysisModal(prev => ({ ...prev, visible: false }));
-    setChatOpen(true);
-    showStep(analysisModal.nextStep);
-  };
-  
+  // --- EFFECT: Scroll al fondo --- //
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (analysisModal.visible && !e.target.closest('.analysis-pop-up')) {
-        setAnalysisModal(prev => ({ ...prev, visible: false }));
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [analysisModal.visible]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, view]);
 
+  // --- EFFECT: Guardar tamaño --- //
+  useEffect(() => {
+    if(!isResizing.current) {
+      localStorage.setItem('academium_chat_size', JSON.stringify(size));
+    }
+  }, [size]);
 
-  return (
-    <div className="dashboard-view">
-      <Sidebar onLogout={onLogout} /> 
-      <Header onSettingsClick={() => setCurrentModal('settings')} />
-      
-      <main id="dashboard-main">
-        {userRole === 'cliente' && <ClientDashboard onChartClick={handleChartClick} />}
-        {userRole === 'admin' && <AdminDashboard onChartClick={handleChartClick} />}
-      </main>
+  // --- LÓGICA DE REDIMENSIONAMIENTO --- //
+  const startResize = (e, direction) => {
+    e.preventDefault();
+    isResizing.current = true;
+    resizeDir.current = direction;
+    startPos.current = { x: e.clientX, y: e.clientY, w: size.width, h: size.height };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', stopResize);
+  };
 
-      <ChatWidget
-        isOpen={isChatOpen}
-        onToggle={() => setChatOpen(!isChatOpen)}
-        messages={chatMessages}
-        onUserSelection={handleUserSelection}
-        onTextInput={handleTextInput}
-        inputText={inputText}
-        setInputText={setInputText}
-        isAwaitingInput={isAwaitingInput}
-      />
-      
-      <Modals
-        currentModal={currentModal}
-        onClose={() => setCurrentModal(null)}
-        onSecurityClick={() => {
-          setCurrentModal(null);
-          setChatOpen(true);
-          showStep('info_sensible');
-        }}
-      />
+  const handleMouseMove = (e) => {
+    if (!isResizing.current) return;
+    const deltaX = startPos.current.x - e.clientX; 
+    const deltaY = startPos.current.y - e.clientY;
+    
+    let newWidth = startPos.current.w;
+    let newHeight = startPos.current.h;
 
-      {analysisModal.visible && (
-        <AnalysisModal
-          {...analysisModal}
-          onClick={handleAnalysisClick}
-        />
-      )}
+    if (resizeDir.current === 'left' || resizeDir.current === 'corner') newWidth += deltaX;
+    if (resizeDir.current === 'top' || resizeDir.current === 'corner') newHeight += deltaY;
+
+    // Límites
+    if (newWidth < 320) newWidth = 320;
+    if (newHeight < 400) newHeight = 400;
+    if (newWidth > window.innerWidth - 20) newWidth = window.innerWidth - 20;
+
+    setSize({ width: newWidth, height: newHeight });
+  };
+
+  const stopResize = () => {
+    isResizing.current = false;
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', stopResize);
+    localStorage.setItem('academium_chat_size', JSON.stringify(size));
+  };
+
+  // --- FUNCIONES CHAT --- //
+  const addBotMessage = (text, options = []) => {
+    setMessages(prev => [...prev, { sender: 'bot', text, options, timestamp: new Date() }]);
+  };
+
+  const addUserMessage = (text) => {
+    setMessages(prev => [...prev, { sender: 'user', text, timestamp: new Date() }]);
+    // Guardar en historial simulado
+    if (messages.length > 1 && view === 'chat') {
+      setHistory(prev => [{ summary: text.substring(0, 25) + "...", date: new Date().toLocaleTimeString() }, ...prev].slice(0, 10));
+    }
+  };
+
+  const handleOptionClick = (option) => {
+    addUserMessage(option.text);
+    if(initialChatFlow[option.next]) {
+      setTimeout(() => {
+        const step = initialChatFlow[option.next];
+        addBotMessage(step.msg, step.options);
+      }, 600);
+    }
+  };
+
+  const handleSend = () => {
+    if (!input.trim()) return;
+    addUserMessage(input);
+    setInput('');
+    setTimeout(() => addBotMessage("Entendido. Estoy procesando esa solicitud con los datos actuales..."), 800);
+  };
+
+  // --- SUB-VISTAS --- //
+
+  // FIX: Header con botón ATRÁS
+  const renderHeader = () => (
+    <div className="chat-header">
+      <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+        {view !== 'chat' ? (
+          <button 
+            onClick={() => setView('chat')} 
+            style={{background:'none', border:'none', color:'white', cursor:'pointer', padding: 0, display: 'flex'}}
+            title="Volver al chat"
+          >
+            <ArrowLeft size={20} />
+          </button>
+        ) : (
+          <div style={{position: 'relative', width: 32, height: 32}}>
+             <img 
+               src="https://ui-avatars.com/api/?name=Bot&background=fff&color=2D5D9B" 
+               style={{width: '100%', height: '100%', borderRadius: '50%'}} 
+               alt="Bot" 
+             />
+             <span style={{position: 'absolute', bottom: 0, right: 0, width: 9, height: 9, background: '#2ecc71', borderRadius: '50%', border: '1.5px solid #2D5D9B'}}></span>
+          </div>
+        )}
+        
+        <div>
+          <h4 style={{margin: 0, fontSize: '0.95rem', lineHeight: '1.2'}}>
+            {view === 'chat' ? 'Asistente Academium' : 
+             view === 'history' ? 'Historial' : 
+             view === 'settings' ? 'Configuración' : 'Buzón TI'}
+          </h4>
+          {view === 'chat' && <small style={{fontSize: '0.7rem', opacity: 0.85}}>En línea • v2.4</small>}
+        </div>
+      </div>
+
+      <div className="chat-controls">
+        {view === 'chat' && (
+          <>
+            <Tooltip title="Historial">
+              <Clock size={18} style={{cursor: 'pointer', opacity: 0.9}} onClick={() => setView('history')} />
+            </Tooltip>
+            <Tooltip title="Configuración">
+              <Settings size={18} style={{cursor: 'pointer', opacity: 0.9}} onClick={() => setView('settings')} />
+            </Tooltip>
+          </>
+        )}
+        <X size={20} style={{cursor: 'pointer', marginLeft: 8}} onClick={onClose} />
+      </div>
     </div>
   );
-}
 
-// --- Componentes del Dashboard ---
-
-function Sidebar({ onLogout }) { 
-  return (
-    <aside id="dashboard-sidebar">
-      <div>
-        <div className="logo">Academium</div>
-        <nav>
-          <a href="#" className="active"><Home size={20} /> Inicio</a>
-          <a href="#"><FileText size={20} /> Facturas</a>
-          <a href="#"><DollarSign size={20} /> Pagos</a>
-          <a href="#"><BarChart2 size={20} /> Reportes</a>
-          <a href="#"><Users size={20} /> Estudiantes</a>
-        </nav>
+  // FIX: Configuración Completa
+  const renderSettings = () => (
+    <div className="overlay-view">
+      <div className="setting-group">
+        <label>Motor de IA (Fiabilidad)</label>
+        <div className="segmented-control">
+          <button className={settings.motorIA === 'estable' ? 'active' : ''} onClick={() => setSettings({...settings, motorIA: 'estable'})}>
+            <UserCheck size={14} /> Estable
+          </button>
+          <button className={settings.motorIA === 'avanzado' ? 'active' : ''} onClick={() => setSettings({...settings, motorIA: 'avanzado'})}>
+            <TrendingUp size={14} /> Pro
+          </button>
+          <button className={settings.motorIA === 'experimental' ? 'active' : ''} onClick={() => setSettings({...settings, motorIA: 'experimental'})}>
+            <Zap size={14} /> Beta
+          </button>
+        </div>
       </div>
-      <div className="sidebar-footer">
-        <button onClick={onLogout}>
-          <LogOut size={20} />
-          Cerrar sesión
+
+      <div className="setting-group">
+        <label>Nivel de Proactividad</label>
+        <div className="segmented-control">
+          <button className={settings.proactividad === 'reactivo' ? 'active' : ''} onClick={() => setSettings({...settings, proactividad: 'reactivo'})}>
+            <BellOff size={14} /> Reactivo
+          </button>
+          <button className={settings.proactividad === 'proactivo' ? 'active' : ''} onClick={() => setSettings({...settings, proactividad: 'proactivo'})}>
+            <Bell size={14} /> Proactivo
+          </button>
+        </div>
+      </div>
+
+      <div className="setting-group row">
+        <label>Densidad de Resúmenes</label>
+        <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
+          <span style={{fontSize: '0.8rem', color: '#666'}}>{settings.densidad ? 'Detallado' : 'Simplificado'}</span>
+          <label className="switch">
+            <input type="checkbox" checked={settings.densidad} onChange={() => setSettings({...settings, densidad: !settings.densidad})} />
+            <span className="slider round"></span>
+          </label>
+        </div>
+      </div>
+
+      <div className="setting-group">
+        <label>Canal Preferido</label>
+        <div className="segmented-control">
+          <button className={settings.canal === 'email' ? 'active' : ''} onClick={() => setSettings({...settings, canal: 'email'})}>
+            <Mail size={14} /> Email
+          </button>
+          <button className={settings.canal === 'whatsapp' ? 'active' : ''} onClick={() => setSettings({...settings, canal: 'whatsapp'})}>
+            <MessageCircle size={14} /> WhatsApp
+          </button>
+        </div>
+      </div>
+
+      <div className="setting-group">
+        <button className="security-btn" onClick={() => alert("Modo Seguro Activado: Se requerirá 2FA para acciones sensibles.")}>
+          <Lock size={14} /> Activar Modo Alta Seguridad
         </button>
       </div>
-    </aside>
-  );
-}
 
-function Header({ onSettingsClick }) {
-  return (
-    <header id="dashboard-header" className="dashboard-header">
-      <div className="header-icon"><Bell size={20} /></div>
-      <div className="header-icon" onClick={onSettingsClick}><Settings size={20} /></div>
-    </header>
-  );
-}
-
-function ClientDashboard({ onChartClick }) {
-  return (
-    <div className="dashboard-content">
-      <h2>Hola, {'{Nombre_Cliente}'}</h2> 
-      
-      <div className="dashboard-grid">
-        <KpiCard title="Deuda Pendiente" value="$ 50.00" label="Vence en 2 días" type="negative" />
-        <KpiCard title="Última Factura Pagada" value="$ 250.00" label="Pagada el 01/Nov" type="positive" />
-        <KpiCard title="Próximo Pago" value="01 de Diciembre" label="Pensión" type="warning" />
-      </div>
-
-      <h2 style={{ marginTop: '20px' }}>Análisis Gráfico</h2>
-
-      <div className="dashboard-grid client-charts">
-        <div className="dash-card">
-          <h3>Gastos por Categoría (Año)</h3>
-          <div 
-            className="chart-container" 
-            onClick={(e) => onChartClick(e, 'cliente_pie', 'Gastos por Categoría', "La <strong>Pensión (70%)</strong> es tu gasto principal. Haz clic para ver el detalle de 'Otros'.")}
-          >
-            <Pie data={chartData.clientPie.data} options={chartData.clientPie.options} />
-          </div>
-        </div>
-        <div className="dash-card">
-          <h3>Historial de Pagos (Últ. 6 Meses)</h3>
-          <div 
-            className="chart-container" 
-            onClick={(e) => onChartClick(e, 'cliente_bar', 'Historial de Pagos', "Detectamos un <strong class='negative'>pago duplicado en Septiembre</strong>. Haz clic para reportarlo.")}
-          >
-            <Bar data={chartData.clientBar.data} options={chartData.clientBar.options} />
-          </div>
-        </div>
-      </div>
+      <button className="save-btn" onClick={() => setView('chat')}>Guardar Cambios</button>
     </div>
   );
-}
 
-function AdminDashboard({ onChartClick }) {
-  return (
-    <div className="dashboard-content">
-      <h2>Dashboard Administrativo</h2>
-      
-      <div className="dashboard-grid">
-        <KpiCard title="Recaudación (Hoy)" value="$ 8,530.00" type="positive" />
-        <KpiCard title="Facturas Pagadas (Hoy)" value="52" />
-        <KpiCard title="Cartera Vencida" value="$ 4,250.00" type="negative" />
-        <KpiCard title="Tasa de Morosidad" value="12.5%" type="negative" />
-      </div>
-
-      <h2 style={{ marginTop: '20px' }}>Análisis Gráfico</h2>
-
-      <div className="dashboard-grid admin-charts">
-        <div className="dash-card">
-          <h3>Recaudación Últimos 7 Días</h3>
-          <div 
-            className="chart-container"
-            onClick={(e) => onChartClick(e, 'admin_bar', 'Tendencia de Recaudación', "Se observa un <strong class='positive'>pico de pagos los días Lunes</strong>. Los Jueves son los días más bajos. ¿Analizamos los métodos de pago?")}
-          >
-            <Bar data={chartData.adminBar.data} options={chartData.adminBar.options} />
-          </div>
+  const renderHistory = () => (
+    <div className="overlay-view">
+      {history.length === 0 ? (
+        <div style={{textAlign: 'center', padding: 20, color: '#999'}}>
+          <Clock size={40} style={{marginBottom: 10, opacity: 0.5}} />
+          <p>No hay historial reciente en esta sesión.</p>
         </div>
-        <div className="dash-card">
-          <h3>Métodos de Pago (Últ. 30 días)</h3>
-          <div 
-            className="chart-container"
-            onClick={(e) => onChartClick(e, 'admin_pie', 'Análisis de Pagos', "<strong class='negative'>El 45% de pagos sigue siendo en Efectivo/Ventanilla</strong>, lo cual es costoso de procesar. ¿Desea ver el análisis estadístico de pagos con tarjeta?")}
-          >
-            <Pie data={chartData.adminPie.data} options={chartData.adminPie.options} />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function KpiCard({ title, value, label, type = '' }) {
-  const valueClass = `value ${type}`;
-  return (
-    <div className="dash-card kpi-card">
-      <h3>{title}</h3>
-      <p className={valueClass}>{value}</p>
-      {label && <p className="label">{label}</p>}
-    </div>
-  );
-}
-
-// --- Componentes del Chat ---
-
-function ChatWidget({ 
-  isOpen, onToggle, messages, onUserSelection,
-  onTextInput, inputText, setInputText, isAwaitingInput 
-}) {
-  const chatEndRef = useRef(null);
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const handleSendClick = () => {
-    onTextInput(inputText);
-  };
-  
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSendClick();
-    }
-  };
-
-  return (
-    <>
-      <button id="chat-toggle-button" className="chat-toggle-button" onClick={onToggle}>
-        {isOpen ? <X size={28} /> : <MessageSquare size={28} />}
-      </button>
-
-      <div id="chat-widget" className={`chat-widget ${isOpen ? 'open' : ''}`}>
-        <div className="chat-header">
-          <h3>Asistente Academium</h3>
-          <button onClick={onToggle}><X size={18} /></button>
-        </div>
-        <div className="chat-messages">
-          {messages.map((msg) => (
-            <Message key={msg.id} {...msg} onUserSelection={onUserSelection} />
-          ))}
-          <div ref={chatEndRef} />
-        </div>
-        <div className="chat-input-area">
-          <input 
-            type="text" 
-            placeholder={isAwaitingInput ? "Escribe tu respuesta..." : "Escribe un mensaje..."}
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyPress={handleKeyPress}
-          />
-          <button onClick={handleSendClick} disabled={!inputText.trim()}>
-            <Send size={18} />
-          </button>
-        </div>
-      </div>
-    </>
-  );
-}
-
-function Message({ sender, content, options, carousel, onUserSelection }) {
-  if (typeof content !== 'string') {
-    return <div className="message bot">{content}</div>;
-  }
-  
-  const handleOptionClick = (e) => {
-    const nextStep = e.target.dataset.nextStep;
-    const text = e.target.textContent;
-    const parent = e.target.parentElement;
-    parent.querySelectorAll('.option-button').forEach(btn => {
-      btn.disabled = true;
-      btn.classList.add('disabled');
-    });
-    if (onUserSelection) {
-      onUserSelection(nextStep, text);
-    }
-  };
-  
-  return (
-    <div className={`message ${sender}`}>
-      <span dangerouslySetInnerHTML={{ __html: content }} />
-      {carousel && carousel.length > 0 && <Carousel items={carousel} />}
-      {options && options.length > 0 && (
-        <div className="message-options">
-          {options.map((opt, index) => (
-            <button
-              key={index}
-              className="option-button"
-              data-next-step={opt.nextStep}
-              onClick={handleOptionClick}
-            >
-              {opt.text}
-            </button>
+      ) : (
+        <div className="history-list">
+          {history.map((h, i) => (
+            <div key={i} className="history-item" onClick={() => { addUserMessage(h.summary); setView('chat'); }}>
+              <span className="history-text">{h.summary}</span>
+              <span className="history-time">{h.date}</span>
+            </div>
           ))}
         </div>
       )}
     </div>
   );
-}
 
-function TypingIndicator() {
-  return (
-    <div className="typing-indicator">
-      <span></span>
-      <span></span>
-      <span></span>
-    </div>
-  );
-}
-
-function Carousel({ items }) {
-  const [index, setIndex] = useState(0);
-
-  const canGoPrev = index > 0;
-  const canGoNext = index < items.length - 1;
-
-  const next = () => canGoNext && setIndex(i => i + 1);
-  const prev = () => canGoPrev && setIndex(i => i - 1);
-
-  return (
-    <div className="carousel">
-      <div className="carousel-inner" style={{ transform: `translateX(-${index * 100}%)` }}>
-        {items.map((item, i) => (
-          <div className="carousel-item" key={i}>
-            <h4>{item.title}</h4>
-            <p>{item.content}</p>
-          </div>
-        ))}
-      </div>
-      <div className="carousel-nav">
-        <button onClick={prev} disabled={!canGoPrev}><ChevronLeft size={14} /></button>
-        <button onClick={next} disabled={!canGoNext}><ChevronRight size={14} /></button>
+  const renderDevBox = () => (
+    <div className="overlay-view">
+      <p style={{fontSize: '0.9rem', color: '#555', marginBottom: 15}}>
+        ¿Encontraste un error o tienes una sugerencia? Describe tu solicitud para el equipo de desarrollo.
+      </p>
+      <textarea 
+        className="dev-textarea" 
+        placeholder="Ej: El reporte de ventas no carga la columna de fechas..."
+      ></textarea>
+      
+      <div style={{display: 'flex', gap: 10, marginTop: 15}}>
+        {/* FIX: Botón de retroceso explícito también aquí */}
+        <button className="cancel-btn" onClick={() => setView('chat')}>Cancelar</button>
+        <button className="send-btn" onClick={() => { alert('¡Reporte enviado con éxito!'); setView('chat'); }}>
+          Enviar Reporte
+        </button>
       </div>
     </div>
   );
-}
 
-
-// --- Componentes de Modales ---
-
-function Modals({ currentModal, onClose, onSecurityClick }) {
-  if (!currentModal) return null;
-
-  return (
-    <>
-      {currentModal === 'settings' && (
-        <SettingsModal onClose={onClose} onSecurityClick={onSecurityClick} />
-      )}
-    </>
-  );
-}
-
-function Modal({ children, onClose, modalId }) {
-  const handleContentClick = (e) => e.stopPropagation();
-  return (
-    <div id={modalId} className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={handleContentClick}>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-// --- MODAL DE CONFIGURACIÓN (REDISEÑADO) ---
-function SettingsModal({ onClose, onSecurityClick }) {
-  const [canal, setCanal] = useState('email');
-  const [motorIA, setMotorIA] = useState('estable');
-  const [proactividad, setProactividad] = useState('reactivo');
-  const [densidad, setDensidad] = useState(false); // false = Simplificado
-
-  return (
-    <Modal onClose={onClose} modalId="settings-modal">
-      <div className="modal-header">
-        <h3>Configuración y Fiabilidad</h3>
-        <button className="close-button" onClick={onClose}>&times;</button>
-      </div>
-      <div className="modal-body">
-
-        <div className="form-group">
-          <label>Motor de IA (Fiabilidad)</label>
-          <p className="description">Elige el modelo para análisis y respuestas.</p>
-          <div className="segmented-control">
-            <button className={motorIA === 'estable' ? 'active' : ''} onClick={() => setMotorIA('estable')}>
-              <UserCheck size={16} style={{marginRight: '8px'}}/> Estable (v2.4)
-            </button>
-            <button className={motorIA === 'avanzado' ? 'active' : ''} onClick={() => setMotorIA('avanzado')}>
-              <TrendingUp size={16} style={{marginRight: '8px'}}/> Avanzado (v3.0)
-            </button>
-            <button className={motorIA === 'experimental' ? 'active' : ''} onClick={() => setMotorIA('experimental')}>
-              <Zap size={16} style={{marginRight: '8px'}}/> Experimental (Gemini)
-            </button>
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label>Nivel de Proactividad del Asistente</label>
-          <p className="description">Elige si el bot debe enviarte alertas o solo responder.</p>
-          <div className="segmented-control">
-            <button className={proactividad === 'reactivo' ? 'active' : ''} onClick={() => setProactividad('reactivo')}>
-              <BellOff size={16} style={{marginRight: '8px'}}/> Reactivo
-            </button>
-            <button className={proactividad === 'proactivo' ? 'active' : ''} onClick={() => setProactividad('proactivo')}>
-              <Bell size={16} style={{marginRight: '8px'}}/> Proactivo
-            </button>
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label>Densidad de Resúmenes</label>
-          <p className="description">Muestra resúmenes simplificados o con todo el detalle técnico.</p>
-          <label className="switch">
-            <input type="checkbox" checked={densidad} onChange={() => setDensidad(!densidad)} />
-            <span className="slider"></span>
-          </label>
-          <span style={{marginLeft: '10px', verticalAlign: 'middle'}}>{densidad ? 'Detallado' : 'Simplificado'}</span>
-        </div>
-        
-        <div className="form-group">
-          <label>Canal de Notificación Preferido</label>
-          <div className="segmented-control">
-            <button className={canal === 'email' ? 'active' : ''} onClick={() => setCanal('email')}>
-              <Mail size={16} style={{marginRight: '8px'}}/> Email
-            </button>
-            <button className={canal === 'whatsapp' ? 'active' : ''} onClick={() => setCanal('whatsapp')}>
-              <MessageCircle size={16} style={{marginRight: '8px'}}/> WhatsApp
-            </button>
-          </div>
-        </div>
-
-        <div className="form-group" style={{marginTop: '30px', borderTop: '1px solid var(--border-color)', paddingTop: '20px'}}>
-          <label>Modo de Alta Seguridad</label>
-          <p className="description">Prueba el flujo de confirmación para acceder a datos sensibles.</p>
-          <button className="option-button" onClick={onSecurityClick} style={{width: '100%', textAlign: 'center', justifyContent: 'center'}}>
-            <AlertTriangle size={16} style={{marginRight: '8px'}} />
-            Probar Flujo de Seguridad
-          </button>
-        </div>
-
-      </div>
-    </Modal>
-  );
-}
-
-function AnalysisModal({ title, summary, onClick, x, y }) {
-  const style = {
-    left: `${x}px`,
-    top: `${y}px`,
-    transform: x > (window.innerWidth - 320) ? 'translateX(-100%)' : 'translateX(0)',
-  };
   return (
     <div 
-      className="analysis-pop-up" 
-      style={style} 
-      onClick={onClick}
+      className="chat-window" 
+      ref={chatRef}
+      style={{ width: size.width, height: size.height }}
     >
-      <h4>{title}</h4>
-      <p dangerouslySetInnerHTML={{ __html: summary }} />
-      <span>Clic para analizar en el chat...</span>
+      {/* Handlers de Resize */}
+      <div className="resize-handle resize-handle-top" onMouseDown={(e) => startResize(e, 'top')}></div>
+      <div className="resize-handle resize-handle-left" onMouseDown={(e) => startResize(e, 'left')}></div>
+      <div className="resize-handle resize-handle-corner" onMouseDown={(e) => startResize(e, 'corner')}></div>
+
+      {renderHeader()}
+      
+      <div className="chat-body">
+        {messages.map((m, i) => (
+          <div key={i} className={`msg ${m.sender}`}>
+            <span dangerouslySetInnerHTML={{__html: m.text}}></span>
+            {m.options && (
+              <div className="options-grid">
+                {m.options.map((opt, idx) => (
+                  <button key={idx} onClick={() => handleOptionClick(opt)} className="chat-option-btn">
+                    {opt.text}
+                  </button>
+                ))}
+              </div>
+            )}
+            <span className="msg-meta">{m.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+          </div>
+        ))}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {view === 'settings' && renderSettings()}
+      {view === 'history' && renderHistory()}
+      {view === 'devbox' && renderDevBox()}
+
+      <div className="chat-footer">
+        <button className="chat-action-btn" title="Buzón TI" onClick={() => setView('devbox')}>
+          <Inbox size={20} />
+        </button>
+        <input 
+          className="chat-input" 
+          value={input} 
+          onChange={e => setInput(e.target.value)} 
+          onKeyPress={e => e.key === 'Enter' && handleSend()}
+          placeholder="Escribe tu consulta..."
+          disabled={view !== 'chat'}
+        />
+        <button className="chat-action-btn send" onClick={handleSend} disabled={view !== 'chat'}>
+          <Send size={18} />
+        </button>
+      </div>
     </div>
   );
-}
+};
+
+// --- COMPONENTES UI RESTANTES (Sidebar, Dashboard) --- //
+// (Estos se mantienen igual que en tu diseño original aprobado)
+
+const Sidebar = () => (
+  <aside className="sidebar">
+    <div className="profile-section">
+      <img src="https://i.pravatar.cc/150?img=68" alt="Profile" className="profile-img" />
+      <h4 style={{margin: '10px 0 5px'}}>Paola Granizo</h4>
+      <small style={{color: '#999'}}>Administradora</small>
+      <button style={{
+        marginTop: '10px', background: '#f1c40f', color: '#333', border: 'none', 
+        padding: '6px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem'
+      }}>Cargar foto</button>
+    </div>
+    
+    <nav style={{marginTop: 20}}>
+      <MenuItem icon={<Home size={18} />} text="Inicio" active />
+      <MenuItem icon={<Settings size={18} />} text="Configuración" />
+      <MenuItem icon={<Users size={18} />} text="Talento Humano" />
+      <MenuItem icon={<DollarSign size={18} />} text="Ventas" />
+      <MenuItem icon={<ShoppingCart size={18} />} text="Compras" />
+      <MenuItem icon={<Layout size={18} />} text="Inventarios" isNew />
+      <MenuItem icon={<BarChart2 size={18} />} text="Contabilidad" />
+    </nav>
+  </aside>
+);
+
+const MenuItem = ({ icon, text, active, isNew }) => (
+  <div className={`menu-item ${active ? 'active' : ''}`}>
+    {icon}
+    <span>{text}</span>
+    {isNew && <span className="tag-new">Nuevo</span>}
+  </div>
+);
+
+const Header = ({ setChatOpen }) => (
+  <header className="header">
+    <div style={{display: 'flex', gap: '20px', alignItems: 'center'}}>
+      <div style={{fontWeight: '800', fontSize: '1.1rem', color: 'var(--color-primary-dark)', letterSpacing: '0.5px'}}>
+        UNIDAD EDUCATIVA SAGRADOS CORAZONES
+      </div>
+    </div>
+    <div className="header-icons">
+      <Search size={20} />
+      <div style={{position: 'relative'}} onClick={() => setChatOpen(true)}>
+        <MessageSquare size={20} />
+        <span className="badge">3</span>
+      </div>
+      <Bell size={20} />
+      <Users size={20} />
+      <Maximize2 size={20} />
+      <Home size={20} />
+    </div>
+  </header>
+);
+
+const DashboardAcademium = () => {
+  return (
+    <main className="dashboard-canvas">
+      <div className="process-map">
+        <svg className="connections-layer">
+          <line x1="400" y1="300" x2="240" y2="60" className="connection-line" />
+          <line x1="400" y1="300" x2="400" y2="60" className="connection-line" />
+          <line x1="400" y1="300" x2="560" y2="60" className="connection-line" />
+          <line x1="400" y1="300" x2="80" y2="180" className="connection-line" />
+          <line x1="400" y1="300" x2="720" y2="180" className="connection-line" />
+          <line x1="400" y1="300" x2="60" y2="300" className="connection-line" />
+          <line x1="400" y1="300" x2="740" y2="300" className="connection-line" />
+          <line x1="400" y1="300" x2="160" y2="480" className="connection-line" />
+          <line x1="400" y1="300" x2="640" y2="480" className="connection-line" />
+          <line x1="400" y1="300" x2="280" y2="540" className="connection-line" />
+          <line x1="400" y1="300" x2="520" y2="540" className="connection-line" />
+        </svg>
+
+        <div className="center-node">
+          <div className="center-ring"></div>
+          <h2 style={{color: '#6c5ce7', margin: 0, fontWeight: 800}}>VENTAS</h2>
+          <div className="center-bar"></div>
+        </div>
+
+        <Node pos="pos-1" icon={<Users color="#6c5ce7" />} title="Clientes" />
+        <Node pos="pos-2" icon={<ShoppingCart color="#00cec9" />} title="Productos y Servicios" />
+        <Node pos="pos-3" icon={<DollarSign color="#6c5ce7" />} title="Anticipos" />
+        <Node pos="pos-4" icon={<FileText color="#6c5ce7" />} title="Servicios Académicos" />
+        <Node pos="pos-5" icon={<FileText color="#6c5ce7" />} title="Notas de Crédito" />
+        <Node pos="pos-6" icon={<Activity color="#6c5ce7" />} title="Descuentos Estudiantes" />
+        <Node pos="pos-7" icon={<DollarSign color="#6c5ce7" />} title="Pagos Múltiples" />
+        <Node pos="pos-8" icon={<Clock color="#00cec9" />} title="Meses a Facturar" />
+        <Node pos="pos-9" icon={<FileText color="#00cec9" />} title="Generar Archivo Banco" />
+        <Node pos="pos-10" icon={<FileText color="#fdcb6e" />} title="Facturas Estudiantes" />
+        <Node pos="pos-11" icon={<Inbox color="#2ecc71" />} title="Cargar Archivo Banco" />
+      </div>
+    </main>
+  );
+};
+
+const Node = ({ pos, icon, title }) => (
+  <div className={`node ${pos}`}>
+    <div className="node-icon-bg">{icon}</div>
+    <span>{title}</span>
+  </div>
+);
 
 export default App;
