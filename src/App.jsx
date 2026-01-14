@@ -7,7 +7,6 @@ import {
   ArrowLeft, Check, Zap, Lock, Mail, MessageCircle, UserCheck, TrendingUp, BellOff
 } from 'react-feather';
 
-// --- CONFIGURACIÓN DEL FLUJO DEL CHAT --- //
 const initialChatFlow = {
   start: {
     msg: "Hola, Gerente. He detectado actualizaciones críticas en los últimos 30 minutos. ¿Qué deseas revisar?",
@@ -49,13 +48,11 @@ const initialChatFlow = {
     msg: "✅ Correo enviado al Jefe Financiero con el reporte adjunto.",
     options: [{ text: "Gracias", next: "start" }]
   },
-  // Fallbacks
   risk_academic: { msg: "Datos académicos estables. No hay alertas.", options: [{ text: "Volver", next: "start" }] },
   sales_forecast: { msg: "Proyección: +3% vs mes anterior.", options: [{ text: "Volver", next: "start" }] },
   finance_plan: { msg: "Plan sugerido: Campaña de descuentos por pronto pago.", options: [{ text: "Volver", next: "start" }] }
 };
 
-// --- COMPONENTE TOOLTIP LOCAL --- //
 const Tooltip = ({ title, children }) => (
   <div title={title} style={{ display: 'inline-flex', cursor: 'help' }}>
     {children}
@@ -91,9 +88,7 @@ function App() {
   );
 }
 
-// --- CHATBOT AVANZADO CON FIXES --- //
 const ChatWidget = ({ onClose }) => {
-  // 1. Estado de dimensiones persistente
   const [size, setSize] = useState(() => {
     const saved = localStorage.getItem('academium_chat_size');
     return saved ? JSON.parse(saved) : { width: 380, height: 550 };
@@ -101,26 +96,24 @@ const ChatWidget = ({ onClose }) => {
 
   const [messages, setMessages] = useState([]);
   const [history, setHistory] = useState([]);
-  const [view, setView] = useState('chat'); // 'chat' | 'history' | 'settings' | 'devbox'
+  const [view, setView] = useState('chat'); 
   const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   
-  // 2. Configuración Completa (Restaurada)
   const [settings, setSettings] = useState({
-    motorIA: 'estable', // estable, avanzado, experimental
-    proactividad: 'reactivo', // reactivo, proactivo
-    densidad: false, // false = simplificado
-    canal: 'email' // email, whatsapp
+    motorIA: 'estable', 
+    proactividad: 'reactivo', 
+    densidad: false, 
+    canal: 'email' 
   });
 
-  // Refs para lógica
   const chatRef = useRef(null);
   const isResizing = useRef(false);
   const resizeDir = useRef(null);
   const startPos = useRef({ x: 0, y: 0, w: 0, h: 0 });
   const messagesEndRef = useRef(null);
-  const hasInitialized = useRef(false); // FIX: Doble mensaje
+  const hasInitialized = useRef(false); 
 
-  // --- EFFECT: Mensaje Inicial --- //
   useEffect(() => {
     if (!hasInitialized.current) {
       hasInitialized.current = true;
@@ -128,19 +121,16 @@ const ChatWidget = ({ onClose }) => {
     }
   }, []);
 
-  // --- EFFECT: Scroll al fondo --- //
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, view]);
+  }, [messages, view, isLoading]);
 
-  // --- EFFECT: Guardar tamaño --- //
   useEffect(() => {
     if(!isResizing.current) {
       localStorage.setItem('academium_chat_size', JSON.stringify(size));
     }
   }, [size]);
 
-  // --- LÓGICA DE REDIMENSIONAMIENTO --- //
   const startResize = (e, direction) => {
     e.preventDefault();
     isResizing.current = true;
@@ -161,7 +151,6 @@ const ChatWidget = ({ onClose }) => {
     if (resizeDir.current === 'left' || resizeDir.current === 'corner') newWidth += deltaX;
     if (resizeDir.current === 'top' || resizeDir.current === 'corner') newHeight += deltaY;
 
-    // Límites
     if (newWidth < 320) newWidth = 320;
     if (newHeight < 400) newHeight = 400;
     if (newWidth > window.innerWidth - 20) newWidth = window.innerWidth - 20;
@@ -176,14 +165,12 @@ const ChatWidget = ({ onClose }) => {
     localStorage.setItem('academium_chat_size', JSON.stringify(size));
   };
 
-  // --- FUNCIONES CHAT --- //
   const addBotMessage = (text, options = []) => {
     setMessages(prev => [...prev, { sender: 'bot', text, options, timestamp: new Date() }]);
   };
 
   const addUserMessage = (text) => {
     setMessages(prev => [...prev, { sender: 'user', text, timestamp: new Date() }]);
-    // Guardar en historial simulado
     if (messages.length > 1 && view === 'chat') {
       setHistory(prev => [{ summary: text.substring(0, 25) + "...", date: new Date().toLocaleTimeString() }, ...prev].slice(0, 10));
     }
@@ -199,16 +186,56 @@ const ChatWidget = ({ onClose }) => {
     }
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim()) return;
-    addUserMessage(input);
+    const userText = input;
+    
+    addUserMessage(userText);
     setInput('');
-    setTimeout(() => addBotMessage("Entendido. Estoy procesando esa solicitud con los datos actuales..."), 800);
+    setIsLoading(true);
+
+    const API_KEY = import.meta.env.VITE_COHERE_API_KEY;
+
+    try {
+      // Usamos el endpoint .ai para evitar bloqueos y el nombre de modelo actualizado
+      const response = await fetch('https://api.cohere.ai/v1/chat', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${API_KEY}`,
+          'Content-Type': 'application/json',
+          'X-Client-Name': 'Academium_Frontend'
+        },
+        body: JSON.stringify({
+          model: 'command-r-plus-08-2024', // Modelo actualizado y soportado
+          message: userText,
+          preamble: `Eres el Asistente Inteligente de "Academium", un sistema ERP educativo.
+            Tu rol es ayudar a Rectores y Gerentes.
+            
+            REGLAS DE COMPORTAMIENTO:
+            1. Si te piden datos (ventas, alumnos, notas), GENERA datos simulados pero REALISTAS y LÓGICOS.
+            2. Si te piden descargar un reporte:
+               - Confirma la acción y pregunta formato (PDF/Excel).
+            3. Sé profesional y conciso.`,
+          temperature: 0.3
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Error ${response.status}: ${errorData.message || 'Error desconocido'}`);
+      }
+
+      const data = await response.json();
+      addBotMessage(data.text);
+
+    } catch (error) {
+      console.error(error);
+      addBotMessage(`⚠️ Error de conexión: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // --- SUB-VISTAS --- //
-
-  // FIX: Header con botón ATRÁS
   const renderHeader = () => (
     <div className="chat-header">
       <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
@@ -237,7 +264,7 @@ const ChatWidget = ({ onClose }) => {
              view === 'history' ? 'Historial' : 
              view === 'settings' ? 'Configuración' : 'Buzón TI'}
           </h4>
-          {view === 'chat' && <small style={{fontSize: '0.7rem', opacity: 0.85}}>En línea • v2.4</small>}
+          {view === 'chat' && <small style={{fontSize: '0.7rem', opacity: 0.85}}>Cohere AI • Conectado</small>}
         </div>
       </div>
 
@@ -257,7 +284,6 @@ const ChatWidget = ({ onClose }) => {
     </div>
   );
 
-  // FIX: Configuración Completa
   const renderSettings = () => (
     <div className="overlay-view">
       <div className="setting-group">
@@ -325,7 +351,7 @@ const ChatWidget = ({ onClose }) => {
       {history.length === 0 ? (
         <div style={{textAlign: 'center', padding: 20, color: '#999'}}>
           <Clock size={40} style={{marginBottom: 10, opacity: 0.5}} />
-          <p>No hay historial reciente en esta sesión.</p>
+          <p>No hay historial reciente.</p>
         </div>
       ) : (
         <div className="history-list">
@@ -343,19 +369,12 @@ const ChatWidget = ({ onClose }) => {
   const renderDevBox = () => (
     <div className="overlay-view">
       <p style={{fontSize: '0.9rem', color: '#555', marginBottom: 15}}>
-        ¿Encontraste un error o tienes una sugerencia? Describe tu solicitud para el equipo de desarrollo.
+        Reporta errores o sugerencias a TI.
       </p>
-      <textarea 
-        className="dev-textarea" 
-        placeholder="Ej: El reporte de ventas no carga la columna de fechas..."
-      ></textarea>
-      
+      <textarea className="dev-textarea" placeholder="Describe el problema..."></textarea>
       <div style={{display: 'flex', gap: 10, marginTop: 15}}>
-        {/* FIX: Botón de retroceso explícito también aquí */}
         <button className="cancel-btn" onClick={() => setView('chat')}>Cancelar</button>
-        <button className="send-btn" onClick={() => { alert('¡Reporte enviado con éxito!'); setView('chat'); }}>
-          Enviar Reporte
-        </button>
+        <button className="send-btn" onClick={() => { alert('¡Enviado!'); setView('chat'); }}>Enviar</button>
       </div>
     </div>
   );
@@ -366,7 +385,6 @@ const ChatWidget = ({ onClose }) => {
       ref={chatRef}
       style={{ width: size.width, height: size.height }}
     >
-      {/* Handlers de Resize */}
       <div className="resize-handle resize-handle-top" onMouseDown={(e) => startResize(e, 'top')}></div>
       <div className="resize-handle resize-handle-left" onMouseDown={(e) => startResize(e, 'left')}></div>
       <div className="resize-handle resize-handle-corner" onMouseDown={(e) => startResize(e, 'corner')}></div>
@@ -389,6 +407,13 @@ const ChatWidget = ({ onClose }) => {
             <span className="msg-meta">{m.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
           </div>
         ))}
+        
+        {isLoading && (
+          <div className="msg bot">
+            <span className="typing-indicator">Pensando... 📊</span>
+          </div>
+        )}
+        
         <div ref={messagesEndRef} />
       </div>
 
@@ -405,19 +430,16 @@ const ChatWidget = ({ onClose }) => {
           value={input} 
           onChange={e => setInput(e.target.value)} 
           onKeyPress={e => e.key === 'Enter' && handleSend()}
-          placeholder="Escribe tu consulta..."
-          disabled={view !== 'chat'}
+          placeholder="Pregunta o pide reportes..."
+          disabled={view !== 'chat' || isLoading}
         />
-        <button className="chat-action-btn send" onClick={handleSend} disabled={view !== 'chat'}>
+        <button className="chat-action-btn send" onClick={handleSend} disabled={view !== 'chat' || isLoading}>
           <Send size={18} />
         </button>
       </div>
     </div>
   );
 };
-
-// --- COMPONENTES UI RESTANTES (Sidebar, Dashboard) --- //
-// (Estos se mantienen igual que en tu diseño original aprobado)
 
 const Sidebar = () => (
   <aside className="sidebar">
@@ -430,7 +452,6 @@ const Sidebar = () => (
         padding: '6px 16px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem'
       }}>Cargar foto</button>
     </div>
-    
     <nav style={{marginTop: 20}}>
       <MenuItem icon={<Home size={18} />} text="Inicio" active />
       <MenuItem icon={<Settings size={18} />} text="Configuración" />
