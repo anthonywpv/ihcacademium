@@ -229,7 +229,6 @@ body {
   margin-top: 8px;
   border-radius: 2px;
 }
-
 /* Nodos Satélite */
 .node {
   position: absolute;
@@ -247,11 +246,16 @@ body {
   cursor: pointer;
   z-index: 1;
   white-space: nowrap;
+  
+  /* FIX: Esto centra el nodo exactamente en su coordenada */
+  transform: translate(-50%, -50%);
 }
 
 .node:hover {
-  transform: scale(1.05);
+  /* FIX: Mantenemos el centrado al hacer hover y escalamos */
+  transform: translate(-50%, -50%) scale(1.05);
   box-shadow: var(--shadow-float);
+  z-index: 10; /* Traer al frente al pasar el mouse */
 }
 
 .node-icon-bg {
@@ -262,25 +266,30 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0; /* Evita que el icono se aplaste */
 }
 
-/* Posicionamiento Manual de Nodos (Radial aproximado) */
-.pos-1 { top: 10%; left: 30%; } 
-.pos-2 { top: 10%; left: 50%; transform: translateX(-50%); } 
-.pos-3 { top: 10%; right: 30%; } 
+/* Posicionamiento Manual Corregido (Más espaciado) */
+/* Fila Superior (Más separados: 20% y 80%) */
+.pos-1 { top: 12%; left: 20%; } 
+.pos-2 { top: 10%; left: 50%; } 
+.pos-3 { top: 12%; left: 80%; } /* Usamos left en lugar de right para consistencia */
 
-.pos-4 { top: 30%; left: 10%; } 
-.pos-5 { top: 30%; right: 10%; } 
+/* Laterales Superiores */
+.pos-4 { top: 32%; left: 10%; } 
+.pos-5 { top: 32%; left: 90%; } 
 
-.pos-6 { top: 50%; left: 5%; transform: translate(-50%, -50%); } /* Extremo Izq */
-.pos-7 { top: 50%; right: 5%; transform: translate(50%, -50%); } /* Extremo Der */
+/* Laterales Medios */
+.pos-6 { top: 50%; left: 5%; } 
+.pos-7 { top: 50%; left: 95%; }
 
-.pos-8 { bottom: 30%; left: 10%; } 
-.pos-9 { bottom: 30%; right: 10%; } 
+/* Laterales Inferiores */
+.pos-8 { top: 68%; left: 10%; } 
+.pos-9 { top: 68%; left: 90%; } 
 
-.pos-10 { bottom: 10%; left: 35%; } 
-.pos-11 { bottom: 10%; right: 35%; }
-
+/* Fila Inferior (Centrados en 30% y 70%) */
+.pos-10 { top: 88%; left: 30%; } 
+.pos-11 { top: 88%; left: 70%; }
 
 /* --- CHATBOT WINDOW --- */
 .chat-window {

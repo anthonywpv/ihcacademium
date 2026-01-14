@@ -512,17 +512,40 @@ const DashboardAcademium = () => {
     <main className="dashboard-canvas">
       <div className="process-map">
         <svg className="connections-layer">
-          <line x1="400" y1="300" x2="240" y2="60" className="connection-line" />
+          {/* Centro del mapa: x=400, y=300 */}
+          
+          {/* Pos 1 (20%, 12%) -> x=160, y=72 */}
+          <line x1="400" y1="300" x2="160" y2="72" className="connection-line" />
+          
+          {/* Pos 2 (50%, 10%) -> x=400, y=60 */}
           <line x1="400" y1="300" x2="400" y2="60" className="connection-line" />
-          <line x1="400" y1="300" x2="560" y2="60" className="connection-line" />
-          <line x1="400" y1="300" x2="80" y2="180" className="connection-line" />
-          <line x1="400" y1="300" x2="720" y2="180" className="connection-line" />
-          <line x1="400" y1="300" x2="60" y2="300" className="connection-line" />
-          <line x1="400" y1="300" x2="740" y2="300" className="connection-line" />
-          <line x1="400" y1="300" x2="160" y2="480" className="connection-line" />
-          <line x1="400" y1="300" x2="640" y2="480" className="connection-line" />
-          <line x1="400" y1="300" x2="280" y2="540" className="connection-line" />
-          <line x1="400" y1="300" x2="520" y2="540" className="connection-line" />
+          
+          {/* Pos 3 (80%, 12%) -> x=640, y=72 */}
+          <line x1="400" y1="300" x2="640" y2="72" className="connection-line" />
+          
+          {/* Pos 4 (10%, 32%) -> x=80, y=192 */}
+          <line x1="400" y1="300" x2="80" y2="192" className="connection-line" />
+          
+          {/* Pos 5 (90%, 32%) -> x=720, y=192 */}
+          <line x1="400" y1="300" x2="720" y2="192" className="connection-line" />
+          
+          {/* Pos 6 (5%, 50%) -> x=40, y=300 */}
+          <line x1="400" y1="300" x2="40" y2="300" className="connection-line" />
+          
+          {/* Pos 7 (95%, 50%) -> x=760, y=300 */}
+          <line x1="400" y1="300" x2="760" y2="300" className="connection-line" />
+          
+          {/* Pos 8 (10%, 68%) -> x=80, y=408 */}
+          <line x1="400" y1="300" x2="80" y2="408" className="connection-line" />
+          
+          {/* Pos 9 (90%, 68%) -> x=720, y=408 */}
+          <line x1="400" y1="300" x2="720" y2="408" className="connection-line" />
+          
+          {/* Pos 10 (30%, 88%) -> x=240, y=528 */}
+          <line x1="400" y1="300" x2="240" y2="528" className="connection-line" />
+          
+          {/* Pos 11 (70%, 88%) -> x=560, y=528 */}
+          <line x1="400" y1="300" x2="560" y2="528" className="connection-line" />
         </svg>
 
         <div className="center-node">
