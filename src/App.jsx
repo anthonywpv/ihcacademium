@@ -89,9 +89,17 @@ function App() {
 }
 
 const ChatWidget = ({ onClose }) => {
+  // FIX 1: Validación al cargar para evitar que inicie gigante
   const [size, setSize] = useState(() => {
     const saved = localStorage.getItem('academium_chat_size');
-    return saved ? JSON.parse(saved) : { width: 380, height: 550 };
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Calculamos límites seguros basados en la ventana actual
+      const safeWidth = Math.min(parsed.width, window.innerWidth - 20);
+      const safeHeight = Math.min(parsed.height, window.innerHeight - 40); // 40px margen superior
+      return { width: safeWidth, height: safeHeight };
+    }
+    return { width: 380, height: 550 };
   });
 
   const [messages, setMessages] = useState([]);
@@ -151,9 +159,16 @@ const ChatWidget = ({ onClose }) => {
     if (resizeDir.current === 'left' || resizeDir.current === 'corner') newWidth += deltaX;
     if (resizeDir.current === 'top' || resizeDir.current === 'corner') newHeight += deltaY;
 
+    // Límites Mínimos (para que no sea muy pequeño)
     if (newWidth < 320) newWidth = 320;
     if (newHeight < 400) newHeight = 400;
-    if (newWidth > window.innerWidth - 20) newWidth = window.innerWidth - 20;
+
+    // FIX 2: Límites Máximos (para no salirse de la pantalla)
+    const maxWidth = window.innerWidth - 20;
+    const maxHeight = window.innerHeight - 40; // Dejamos 40px libres arriba para ver la barra
+
+    if (newWidth > maxWidth) newWidth = maxWidth;
+    if (newHeight > maxHeight) newHeight = maxHeight;
 
     setSize({ width: newWidth, height: newHeight });
   };
@@ -197,7 +212,6 @@ const ChatWidget = ({ onClose }) => {
     const API_KEY = import.meta.env.VITE_COHERE_API_KEY;
 
     try {
-      // Usamos el endpoint .ai para evitar bloqueos y el nombre de modelo actualizado
       const response = await fetch('https://api.cohere.ai/v1/chat', {
         method: 'POST',
         headers: {
@@ -206,7 +220,7 @@ const ChatWidget = ({ onClose }) => {
           'X-Client-Name': 'Academium_Frontend'
         },
         body: JSON.stringify({
-          model: 'command-r-plus-08-2024', // Modelo actualizado y soportado
+          model: 'command-r-plus-08-2024',
           message: userText,
           preamble: `Eres el Asistente Inteligente de "Academium", un sistema ERP educativo.
             Tu rol es ayudar a Rectores y Gerentes.
