@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import './App.css';
 import { 
   Home, Settings, Users, ShoppingCart, DollarSign, FileText, 
   BarChart2, Search, Bell, MessageSquare, X, Send, Clock, 
